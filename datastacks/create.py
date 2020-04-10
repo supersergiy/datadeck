@@ -34,14 +34,8 @@ def create_trainval_data_loaders(augdata_params, input_mip):
     aug_params = {"train": {}, "val": {}}
 
     if "dataset_params" in augdata_params.keys():
-        #legacy
-        raise Exception("Unimplemented")
-        if 'run_transform_def' in augdata_params:
-            result['transform_def']['run'] = \
-                    augdata_params['run_transform_def']
-        if 'loss_transform_def' in augdata_params:
-            result['transform_def']['loss'] = \
-                    augdata_params['loss_transform_def']
+        #legacy TODO: remove
+        raise Exception("LEGACY DATASET DROP SUPPORT")
     else:
         augdset_names = {}
         augdset_names['train'] = augdata_params['train_dset_name']
@@ -84,9 +78,7 @@ def create_trainval_dataset(dataset_params):
         result += [loaders[train_dset_name], loaders[val_dset_name]]
         return datasets[train_dset_name], data
     else:
-        #make sure it's legacy dataset
-        assert 'train_dataset_list' in dataset_params
-        return create_dataset(dataset_params)
+        raise Exception("LEGACY DATASET DROP SUPPORT")
 
 def create_dataset(dataset_param):
     misc = dataset_param['misc']
@@ -98,7 +90,7 @@ def create_dataset(dataset_param):
 
 def create_datasets(dataset_params, dataset_list=None):
     if 'train_dataset_list' in dataset_params:
-        return create_dataset_legacy(dataset_params)
+        raise Exception("LEGACY DATASET DROP SUPPORT")
     else:
         datasets = {}
         loaders = {}
@@ -116,35 +108,6 @@ def create_datasets(dataset_params, dataset_list=None):
         return datasets
 
 
-def create_dataset_legacy(dataset_params):
-    print ("Using legacy dataset format")
-    train_misc = dataset_params['train_misc']
-    if 'train_crop' in dataset_params:
-        train_crop = dataset_params['train_crop']
-        train_misc['crop'] = train_crop
-
-    train_dataset_list = dataset_params['train_dataset_list']
-    train_dataset = compile_dataset(train_dataset_list, misc=train_misc)
-
-    val_misc = dataset_params['val_misc']
-    if 'val_crop' in dataset_params:
-        val_crop = dataset_params['val_crop']
-        val_misc['crop'] = val_crop
-
-    val_dataset_list = dataset_params['val_dataset_list']
-    val_dataset = compile_dataset(val_dataset_list, misc=val_misc)
-
-    train_loader = DataLoader(
-        train_dataset, batch_size=1, shuffle=True,
-        num_workers=0, pin_memory=False
-    )
-
-    val_loader = DataLoader(
-        val_dataset, batch_size=1, shuffle=False,
-        num_workers=0, pin_memory=False
-    )
-    return train_dataset, val_dataset, train_loader, val_loader
-
 def unpack_path_specs(d, working_folder):
     if isinstance(d, dict):
         if 'path' in d:
@@ -159,40 +122,3 @@ def unpack_path_specs(d, working_folder):
             for k in d.keys():
                 d[k] = unpack_path_specs(d[k], working_folder)
     return d
-
-def parse_params(args):
-    params = {}
-    if hasattr(args, 'params_path') and args.params_path is not None:
-        params_path = os.path.expanduser(args.params_path)
-        params_dir = os.path.dirname(params_path)
-
-        with open(params_path, 'r') as params_file:
-            params = json.load(params_file)
-        params['name'] = os.path.basename(params_path).split('.')[0]
-        params['params_folder'] = params_dir
-
-    for p in ['model_params', 'train_params', 'data_params']:
-        if 'params_folder' in params:
-            working_folder = params['params_folder']
-        else:
-            working_folder = None
-
-        if hasattr(args, p) and getattr(args, p) is not None:
-            p_path = os.path.expanduser(getattr(args, p))
-            if p in params:
-                print ("Overriding {} from experiment params with {}".format(p, p_path))
-
-            if p != 'model_params':
-                with open(p_path, 'r') as p_file:
-                    params[p] = json.load(p_file)
-                working_folder = os.path.dirname(p_path)
-            else:
-                params[p] = {'spec_path': p_path}
-
-        params[p] = unpack_path_specs(params[p], working_folder)
-
-    if hasattr(args, 'name') and getattr(args, 'name') is not None:
-        print ("Overriding {} from experiment params with {}".format('name', args.name))
-        params['name'] = args.name
-
-    return params

@@ -12,8 +12,8 @@ from copy import copy, deepcopy
 import skimage
 import six
 
-from helpers import reverse_dim, open_model, expand_dims, get_brightness_mask
-from residuals import res_warp_img, res_warp_res, combine_residuals, \
+from .helpers import reverse_dim, open_model, expand_dims, get_brightness_mask
+from .residuals import res_warp_img, res_warp_res, combine_residuals, \
         downsample_residuals
 
 from pdb import set_trace as st

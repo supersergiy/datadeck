@@ -5,15 +5,17 @@ import warnings
 import torch
 import numpy as np
 import skimage
-from augment import apply_transform
-import augment
 from scipy import ndimage
 from torch import nn
 import random
 import sys
-from pdb import set_trace as st
 import six
-from residuals import upsample_residuals
+
+from .residuals import upsample_residuals
+from .augment import apply_transform, get_center_crop_coords, get_random_crop_coords
+
+from pdb import set_trace as st
+
 
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
@@ -22,12 +24,24 @@ with warnings.catch_warnings():
 mask_types = ['edges', 'defects', 'plastic']
 
 
+class MyConcatDataset(ConcatDataset):
+    def __init__(self, *kargs, **kwargs):
+        super().__init__(*kargs, **kwargs)
+        self.size_limit = super().__len__()
+
+    def __len__(self):
+        return self.size_limit
+
+    def set_size_limit(self, size_limit):
+        self.size_limit = min(size_limit, super().__len__())
+
+
 def compile_dataset(dataset_specs, transform=None, misc={}):
     datasets = []
     for spec in dataset_specs:
         d = h5_to_dataset_list(spec, transform=transform, misc=misc)
         datasets.extend(d)
-    return ConcatDataset(datasets)
+    return MyConcatDataset(datasets)
 
 
 def h5_to_dataset_list(spec, transform=None, misc={}):
@@ -231,10 +245,10 @@ class StackDataset(Dataset):
             if self.misc['crop']['type'] == 'random':
                 if 'seed' in self.misc['crop']:
                    np.random.seed(self.misc['crop']['seed'])
-                x_bot, x_top, y_bot, y_top = augment.get_random_crop_coords(self.shape[2:4], self.misc['crop']['shape'], coord_granularity=shift_granularity)
+                x_bot, x_top, y_bot, y_top = get_random_crop_coords(self.shape[2:4], self.misc['crop']['shape'], coord_granularity=shift_granularity)
                 np.random.seed()
             elif self.misc['crop']['type'] == 'center':
-                x_bot, x_top, y_bot, y_top = augment.get_center_crop_coords(self.shape[2:4], self.misc['crop']['shape'], coord_granularity=shift_granularity)
+                x_bot, x_top, y_bot, y_top = get_center_crop_coords(self.shape[2:4], self.misc['crop']['shape'], coord_granularity=shift_granularity)
         else:
             x_bot = y_bot = 0
             x_top = self.shape[-2]
@@ -356,8 +370,8 @@ class StackDataset(Dataset):
             m_y_bot = y_bot // misc_coord_div
             m_y_top = y_top // misc_coord_div
             misc_data_raw = self.misc_dsets[misc_type][src_ij[0]:src_ij[0]+1, :, m_x_bot:m_x_top, m_y_bot:m_y_top]
-            if self.dataset_mip is not None:
-                misc_data_raw /= 2**self.dataset_mip
+            #if self.dataset_mip is not None:
+            #    misc_data_raw /= 2**self.dataset_mip
             if 'field' in misc_type:
                 misc_data = torch.cuda.FloatTensor(misc_data_raw).permute(1, 2, 0)
                 misc_data = upsample_residuals(misc_data, factor=2.0**misc_mip_diff)

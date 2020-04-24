@@ -17,9 +17,8 @@ from torch.utils.data import DataLoader, ConcatDataset
 from torch.nn.parallel import data_parallel
 from torchvision import transforms
 
-import augment
-from stack_dataset import compile_dataset
-from augment import set_up_transformation, apply_transform, generate_transform
+from .stack_dataset import compile_dataset
+from .augment import set_up_transformation, apply_transform, generate_transform
 import argparse
 
 from pdb import set_trace as st
@@ -27,6 +26,7 @@ from pdb import set_trace as st
 def create_trainval_data_loaders(augdata_params, input_mip):
     result = {}
     result['loaders'] = {}
+    result['datasets'] = {}
     result['transform_def'] = {"loss": {}, "run": {}}
 
     dsets = {"train": None, "val": None}
@@ -61,6 +61,7 @@ def create_trainval_data_loaders(augdata_params, input_mip):
             dsets[dset_type], batch_size=1, shuffle=False,
             num_workers=0, pin_memory=False
         )
+        result['datasets'][dset_type] = dsets[dset_type]
 
     return result
 

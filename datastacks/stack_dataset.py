@@ -347,6 +347,8 @@ class StackDataset(Dataset):
             bundle["src_{}".format(mask_type)] = src_mask
             bundle["tgt_{}".format(mask_type)] = tgt_mask
 
+        bundle['src_zeros'] = bundle['src'] == 0
+        bundle['tgt_zeros'] = bundle['tgt'] == 0
         for misc_type in self.misc_dsets.keys():
             if self.dataset_mip is not None and misc_type in self.misc_mips:
                 misc_mip = self.misc_mips[misc_type]
@@ -373,9 +375,15 @@ class StackDataset(Dataset):
             #if self.dataset_mip is not None:
             #    misc_data_raw /= 2**self.dataset_mip
             if 'field' in misc_type:
-                misc_data = torch.cuda.FloatTensor(misc_data_raw).permute(1, 2, 0)
-                misc_data = upsample_residuals(misc_data, factor=2.0**misc_mip_diff)
-                bundle[misc_type] = misc_data
+
+                misc_data = torch.cuda.FloatTensor(misc_data_raw).squeeze()#.permute(1, 2, 0)
+
+                src_field = misc_data[0]
+                tgt_field = misc_data[1]
+                src_field = upsample_residuals(src_field, factor=2.0**misc_mip_diff)
+                tgt_field = upsample_residuals(tgt_field, factor=2.0**misc_mip_diff)
+                bundle['src_field'] = src_field
+                bundle['tgt_field'] = tgt_field
             else:
                 misc_data = torch.cuda.FloatTensor(misc_data_raw)
                 misc_data = self.upsampler(misc_data,

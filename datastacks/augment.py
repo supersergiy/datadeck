@@ -190,8 +190,8 @@ class SergiyNorm(object):
             tgt_tissue *= tgt_white
 
         if self.filter_defects:
-            src_defects = ((1 - bundle['src_defects']) > 0.95).type(torch.cuda.FloatTensor)
-            tgt_defects = ((1 - bundle['tgt_defects']) > 0.95).type(torch.cuda.FloatTensor)
+            src_defects = ((1 - bundle['src_defects']) > 0.95).float()
+            tgt_defects = ((1 - bundle['tgt_defects']) > 0.95).float()
             src_tissue *= src_defects
             tgt_tissue *= tgt_defects
 
@@ -583,7 +583,8 @@ class ToFloatTensor(object):
     """
     def __call__(self, bundle):
         for k, v in six.iteritems(bundle):
-            bundle[k] = torch.cuda.FloatTensor(v)
+            if not isinstance(v, torch.Tensor):
+                bundle[k] = torch.cuda.FloatTensor(v)
 
         return bundle
 
